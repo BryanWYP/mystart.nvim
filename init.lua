@@ -184,15 +184,6 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
--- TIP: Disable arrow keys in normal mode
--- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
--- vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
--- vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
--- vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
-
--- Keybinds to make split navigation easier.
---  Use CTRL+<hjkl> to switch between windows
---
 --  See `:help wincmd` for a list of all window commands
 vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
 vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
@@ -203,15 +194,49 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 vim.keymap.set('n', '<leader>/', 'gcc', { desc = 'toggle comment', remap = true })
 vim.keymap.set('v', '<leader>/', 'gc', { desc = 'toggle comment', remap = true })
 
--- NOTE: Some terminals have colliding keymaps or are not able to send distinct keycodes
--- vim.keymap.set("n", "<C-S-h>", "<C-w>H", { desc = "Move window to the left" })
--- vim.keymap.set("n", "<C-S-l>", "<C-w>L", { desc = "Move window to the right" })
--- vim.keymap.set("n", "<C-S-j>", "<C-w>J", { desc = "Move window to the lower" })
--- vim.keymap.set("n", "<C-S-k>", "<C-w>K", { desc = "Move window to the upper" })
+-- Copy current word
+vim.keymap.set('n', '<leader>w', function()
+  local pos = vim.api.nvim_win_get_cursor(0)
+  local line = vim.api.nvim_get_current_line()
+  local col = pos[2] + 1
+  -- 找出当前单词边界
+  local left = line:sub(1, col):find '[%w_]+$'
+  if not left then
+    return
+  end
+  local right = line:find('[^%w_]', col) or (#line + 1)
+  -- 选中单词的范围（光标列从0开始）
+  vim.cmd 'normal! m`' -- 暂存原光标位置
+  vim.api.nvim_win_set_cursor(0, { pos[1], left - 1 })
+  vim.cmd 'normal! v'
+  vim.api.nvim_win_set_cursor(0, { pos[1], right - 2 }) -- 光标移动到单词结尾
+  vim.cmd 'normal! y' -- 真正执行 yank
+  vim.cmd 'normal! ``'
+end, { desc = 'Yank current word (with highlight, cursor stays)' })
+
+-- Jump to end of () in Insert Mode
+vim.keymap.set('i', '<C-l>', function()
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local line = vim.api.nvim_get_current_line()
+  local next_char = line:sub(col + 1, col + 1)
+  -- 如果光标右边是右括号，则跳到右括号后
+  if next_char == ')' or next_char == '"' or next_char == ']' then
+    vim.api.nvim_win_set_cursor(0, { row, col + 1 })
+  end
+end, { desc = '插入模式中跳出括号', noremap = true })
+
+-- Goto definination using tags
+vim.keymap.set('n', 'gd', '<C-]>', { desc = 'Jump tags defination', remap = true })
+
+-- Set delete command using blank hole register
+vim.keymap.set({ 'n', 'x' }, 'd', '"_d', { noremap = true })
+vim.keymap.set({ 'n', 'x' }, 'c', '"_c', { noremap = true })
+vim.keymap.set({ 'n', 'x' }, 'x', '"_x', { noremap = true })
+-- keep a method of cropping
+vim.keymap.set({ 'n', 'x' }, '<leader>d', 'd', { noremap = true, desc = 'cut (with register)' })
 
 -- Command abbreviation
 vim.cmd [[ cabbrev ch changes ]]
--- vim.cmd [[ cabbrev lsc LspStop clangd]]
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
@@ -436,32 +461,20 @@ require('lazy').setup({
       local builtin = require 'telescope.builtin'
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
-      vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
-      vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
+      vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles Globally' })
+      vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch All Recent Files' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
-      vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
-      vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
-      vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
-      vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
-
-      -- Slightly advanced example of overriding default behavior and theme
-      vim.keymap.set('n', '<leader>/', function()
-        -- You can pass additional configuration to Telescope to change the theme, layout, etc.
-        builtin.current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
-          winblend = 10,
-          previewer = false,
-        })
-      end, { desc = '[/] Fuzzily search in current buffer' })
-
-      -- It's also possible to pass additional configuration options.
-      --  See `:help telescope.builtin.live_grep()` for information about particular keys
-      vim.keymap.set('n', '<leader>s/', function()
+      vim.keymap.set('n', '<leader>sb', builtin.buffers, { desc = '[S]earch existing [B]uffers' })
+      vim.keymap.set('n', '<leader>s/', builtin.current_buffer_fuzzy_find, { desc = '[S]earch Fuzzily in [C]urrent File' })
+      vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch String by [G]rep' })
+      vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
+      vim.keymap.set('n', '<leader>so', function()
         builtin.live_grep {
           grep_open_files = true,
-          prompt_title = 'Live Grep in Open Files',
+          prompt_title = 'Live Grep in Opened Files',
         }
-      end, { desc = '[S]earch [/] in Open Files' })
+      end, { desc = '[S]earch in [O]pened Files' })
 
       -- Shortcut for searching your Neovim configuration files
       vim.keymap.set('n', '<leader>sn', function()
@@ -543,10 +556,7 @@ require('lazy').setup({
             vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
           end
 
-          -- Jump to the definition of the word under your cursor.
-          --  This is where a variable was first declared, or where a function is defined, etc.
-          --  To jump back, press <C-t>.
-          map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
+          -- map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
 
           -- WARN: This is not Goto Definition, this is Goto Declaration.
           --  For example, in C this would take you to the header.
@@ -570,7 +580,7 @@ require('lazy').setup({
 
           -- Fuzzy find all the symbols in your current workspace.
           --  Similar to document symbols, except searches over your entire project.
-          map('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, 'Open Workspace Symbols')
+          map('<leader>os', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[O]pen Workspace [S]ymbols')
 
           -- Rename the variable under your cursor.
           --  Most Language Servers support renaming across files, etc.
@@ -970,6 +980,16 @@ require('lazy').setup({
     --    - Show your current context: https://github.com/nvim-treesitter/nvim-treesitter-context
     --    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
   },
+  {
+    'ludovicchabant/vim-gutentags',
+    config = function()
+      vim.g.gutentags_project_root = { '.git', 'Makefile', 'package.json' }
+      vim.g.gutentags_cache_dir = vim.fn.expand '~/.cache/tags'
+      vim.g.gutentags_generate_on_missing = 1
+      vim.g.gutentags_generate_on_write = 1
+      vim.opt.tags = './tags;,tags'
+    end,
+  },
 
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
@@ -981,7 +1001,7 @@ require('lazy').setup({
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
   -- require 'kickstart.plugins.debug',
-  -- require 'kickstart.plugins.indent_line',
+  require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
   require 'kickstart.plugins.autopairs',
   require 'kickstart.plugins.neo-tree',
