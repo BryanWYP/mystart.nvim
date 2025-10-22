@@ -84,6 +84,9 @@ I hope you enjoy your Neovim journey,
 P.S. You can delete this when you're done too. It's your config now! :)
 --]]
 
+-- Dependency of external packages
+-- telescope-ng: ast-grep-cli, using pip
+
 -- Set <space> as the leader key
 -- See `:help mapleader`
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
@@ -141,6 +144,12 @@ vim.o.timeoutlen = 300
 vim.o.splitright = true
 vim.o.splitbelow = true
 
+-- Configure tab bandwidth
+vim.opt.tabstop = 4 -- 一个 <Tab> 等于 4 个空格
+vim.opt.shiftwidth = 4 -- 缩进级别（按 >> 或 << 时移动的空格数）
+vim.opt.softtabstop = 4 -- 输入 <Tab> 时的空格数
+vim.opt.expandtab = false -- 用空格代替 tab 字符
+
 -- Sets how neovim will display certain whitespace characters in the editor.
 --  See `:help 'list'`
 --  and `:help 'listchars'`
@@ -183,6 +192,7 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- NOTE: This won't work in all terminal emulators/tmux/etc. Try your own mapping
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+vim.keymap.set('n', '<leader>t', '<cmd>terminal<CR>')
 
 --  See `:help wincmd` for a list of all window commands
 vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
@@ -220,7 +230,7 @@ vim.keymap.set('i', '<C-l>', function()
   local line = vim.api.nvim_get_current_line()
   local next_char = line:sub(col + 1, col + 1)
   -- 如果光标右边是右括号，则跳到右括号后
-  if next_char == ')' or next_char == '"' or next_char == ']' then
+  if next_char == ')' or next_char == '"' or next_char == ']' or next_char == '`' then
     vim.api.nvim_win_set_cursor(0, { row, col + 1 })
   end
 end, { desc = '插入模式中跳出括号', noremap = true })
@@ -463,12 +473,18 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles Globally' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch All Recent Files' })
-      vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
+      vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord Globally' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sb', builtin.buffers, { desc = '[S]earch existing [B]uffers' })
       vim.keymap.set('n', '<leader>s/', builtin.current_buffer_fuzzy_find, { desc = '[S]earch Fuzzily in [C]urrent File' })
-      vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch String by [G]rep' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
+      vim.keymap.set('n', '<leader>sg', function()
+        builtin.live_grep {
+          cwd = vim.fn.getcwd(),
+          use_regex = true,
+        }
+      end, { desc = '[S]earch String by [G]rep' })
+
       vim.keymap.set('n', '<leader>so', function()
         builtin.live_grep {
           grep_open_files = true,
