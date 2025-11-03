@@ -148,7 +148,7 @@ vim.o.splitbelow = true
 vim.opt.tabstop = 4 -- 一个 <Tab> 等于 4 个空格
 vim.opt.shiftwidth = 4 -- 缩进级别（按 >> 或 << 时移动的空格数）
 vim.opt.softtabstop = 4 -- 输入 <Tab> 时的空格数
-vim.opt.expandtab = false -- 用空格代替 tab 字符
+vim.opt.expandtab = true -- 用空格代替 tab 字符
 
 -- Sets how neovim will display certain whitespace characters in the editor.
 --  See `:help 'list'`
@@ -1004,10 +1004,32 @@ require('lazy').setup({
       vim.g.gutentags_cache_dir = vim.fn.expand '~/.cache/tags'
       vim.g.gutentags_generate_on_missing = 1
       vim.g.gutentags_generate_on_write = 1
-      vim.opt.tags = './tags;,tags'
+      vim.opt.tags = 'tags,./tags'
     end,
   },
-
+  {
+    'nvimtools/none-ls.nvim',
+    lazy = true,
+  },
+  {
+    'zbirenbaum/copilot.lua',
+    cmd = 'Copilot', -- 懒加载：只有执行 :Copilot 或进入 Insert 模式时加载
+    event = 'InsertEnter',
+    config = function()
+      require('copilot').setup {
+        suggestion = { enabled = false }, -- 我们用 copilot-cmp 来接管提示
+        panel = { enabled = false },
+      }
+    end,
+  },
+  -- {
+  --   'zbirenbaum/copilot-cmp',
+  --   dependencies = { 'zbirenbaum/copilot.lua' },
+  --   config = function()
+  --     require('copilot_cmp').setup()
+  --   end,
+  -- },
+  --
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
   -- place them in the correct locations.
@@ -1019,7 +1041,7 @@ require('lazy').setup({
   --
   -- require 'kickstart.plugins.debug',
   require 'kickstart.plugins.indent_line',
-  -- require 'kickstart.plugins.lint',
+  require 'kickstart.plugins.lint',
   require 'kickstart.plugins.autopairs',
   require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
