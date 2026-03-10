@@ -12,155 +12,232 @@ vim.g.have_nerd_font = false
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
--- NOTE: You can change these options as you wish!
---  For more options, you can see `:help option-list`
-
--- Make line numbers default
+-- 这里的选项大部分在 VSCode 中会被忽略（由 VSCode 控制），但设置它们是无害的
 vim.o.number = true
--- You can also add relative line numbers, to help with jumping.
---  Experiment for yourself to see if you like it!
 vim.o.relativenumber = true
-
--- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
-
--- Don't show the mode, since it's already in the status line
 vim.o.showmode = false
 
--- Sync clipboard between OS and Neovim.
---  Schedule the setting after `UiEnter` because it can increase startup-time.
---  Remove this option if you want your OS clipboard to remain independent.
---  See `:help 'clipboard'`
 vim.schedule(function()
-  vim.o.clipboard = 'unnamedplus'
+  vim.o.clipboard = 'unnamedplus' -- VSCode 会自动同步剪切板，这个设置在两端都适用
 end)
 
--- Enable break indent
 vim.o.breakindent = true
-
--- Save undo history
 vim.o.undofile = true
-
--- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 vim.o.ignorecase = true
 vim.o.smartcase = true
-
--- Keep signcolumn on by default
 vim.o.signcolumn = 'yes'
-
--- Decrease update time
 vim.o.updatetime = 250
-
--- Decrease mapped sequence wait time
 vim.o.timeoutlen = 300
-
--- Configure how new splits should be opened
 vim.o.splitright = true
 vim.o.splitbelow = true
-
--- Configure tab bandwidth
-vim.opt.tabstop = 4 -- 一个 <Tab> 等于 4 个空格
-vim.opt.shiftwidth = 4 -- 缩进级别（按 >> 或 << 时移动的空格数）
-vim.opt.softtabstop = 4 -- 输入 <Tab> 时的空格数
-vim.opt.expandtab = true -- 用空格代替 tab 字符
-
--- Sets how neovim will display certain whitespace characters in the editor.
---  See `:help 'list'`
---  and `:help 'listchars'`
---
---  Notice listchars is set using `vim.opt` instead of `vim.o`.
---  It is very similar to `vim.o` but offers an interface for conveniently interacting with tables.
---   See `:help lua-options`
---   and `:help lua-options-guide`
+vim.opt.tabstop = 4
+vim.opt.shiftwidth = 4
+vim.opt.softtabstop = 4
+vim.opt.expandtab = true
 vim.o.list = true
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
-
--- Preview substitutions live, as you type!
 vim.o.inccommand = 'split'
-
--- Show which line your cursor is on
 vim.o.cursorline = true
-
--- Minimal number of screen lines to keep above and below the cursor.
 vim.o.scrolloff = 10
-
--- if performing an operation that would fail due to unsaved changes in the buffer (like `:q`),
--- instead raise a dialog asking if you wish to save the current file(s)
--- See `:help 'confirm'`
 vim.o.confirm = true
 
--- [[ Basic Keymaps ]]
---  See `:help vim.keymap.set()`
+-- [[ Shared Keymaps ]]
+-- 这些快捷键是纯文本操作或逻辑，不依赖具体 UI，在 VSCode 和 nvim 中通用
 
 -- Clear highlights on search when pressing <Esc> in normal mode
---  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
--- Diagnostic keymaps
-vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+vim.keymap.set({ 'n', 'v' }, '<Space>', '<Nop>', { silent = true })
 
--- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
--- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
--- is not what someone will guess without a bit more experience.
---
--- NOTE: This won't work in all terminal emulators/tmux/etc. Try your own mapping
--- or just use <C-\><C-n> to exit terminal mode
-vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
-vim.keymap.set('n', '<leader>t', '<cmd>terminal<CR>')
-
---  See `:help wincmd` for a list of all window commands
-vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
-vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
-vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
-vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
-
--- Code Comment
-vim.keymap.set('n', '<leader>/', 'gcc', { desc = 'toggle comment', remap = true })
-vim.keymap.set('v', '<leader>/', 'gc', { desc = 'toggle comment', remap = true })
-
--- Copy current word
+-- Copy current word (Includes logic, works in both)
 vim.keymap.set('n', '<leader>w', function()
   local pos = vim.api.nvim_win_get_cursor(0)
   local line = vim.api.nvim_get_current_line()
   local col = pos[2] + 1
-  -- 找出当前单词边界
   local left = line:sub(1, col):find '[%w_]+$'
   if not left then
     return
   end
   local right = line:find('[^%w_]', col) or (#line + 1)
-  -- 选中单词的范围（光标列从0开始）
-  vim.cmd 'normal! m`' -- 暂存原光标位置
+  vim.cmd 'normal! m`'
   vim.api.nvim_win_set_cursor(0, { pos[1], left - 1 })
   vim.cmd 'normal! v'
-  vim.api.nvim_win_set_cursor(0, { pos[1], right - 2 }) -- 光标移动到单词结尾
-  vim.cmd 'normal! y' -- 真正执行 yank
+  vim.api.nvim_win_set_cursor(0, { pos[1], right - 2 })
+  vim.cmd 'normal! y'
   vim.cmd 'normal! ``'
-end, { desc = 'Yank current word (with highlight, cursor stays)' })
+end, { desc = 'Yank current word' })
 
 -- Jump to end of () in Insert Mode
 vim.keymap.set('i', '<C-l>', function()
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   local line = vim.api.nvim_get_current_line()
   local next_char = line:sub(col + 1, col + 1)
-  -- 如果光标右边是右括号，则跳到右括号后
   if next_char == ')' or next_char == '"' or next_char == ']' or next_char == '`' then
     vim.api.nvim_win_set_cursor(0, { row, col + 1 })
   end
 end, { desc = '插入模式中跳出括号', noremap = true })
 
--- Goto definination using tags
-vim.keymap.set('n', 'gd', '<C-]>', { desc = 'Jump tags defination', remap = true })
-
 -- Set delete command using blank hole register
 vim.keymap.set({ 'n', 'x' }, 'd', '"_d', { noremap = true })
 vim.keymap.set({ 'n', 'x' }, 'c', '"_c', { noremap = true })
 vim.keymap.set({ 'n', 'x' }, 'x', '"_x', { noremap = true })
--- keep a method of cropping
 vim.keymap.set({ 'n', 'x' }, '<leader>d', 'd', { noremap = true, desc = 'cut (with register)' })
 
 -- Command abbreviation
 vim.cmd [[ cabbrev ch changes ]]
+
+-------------------------------------------------------------------------------
+-- [[ VSCode Adaption ]]
+-- 核心逻辑：如果在 VSCode 环境下，配置专用快捷键并加载轻量插件，然后提前退出
+-------------------------------------------------------------------------------
+if vim.g.vscode then
+  local vscode = require 'vscode'
+
+  -- 1. 窗口管理：委托给 VSCode 的 workbench 命令
+  vim.keymap.set('n', '<C-h>', function()
+    vscode.action 'workbench.action.navigateLeft'
+  end)
+  vim.keymap.set('n', '<C-j>', function()
+    vscode.action 'workbench.action.navigateDown'
+  end)
+  vim.keymap.set('n', '<C-k>', function()
+    vscode.action 'workbench.action.navigateUp'
+  end)
+  vim.keymap.set('n', '<C-l>', function()
+    vscode.action 'workbench.action.navigateRight'
+  end)
+
+  -- 2. 面板操作
+  vim.keymap.set('n', '<leader>t', function()
+    vscode.action 'workbench.action.terminal.toggleTerminal'
+  end) -- toggle terminal
+
+  -- 3. 搜索与文件跳转 (模拟 Telescope)
+  vim.keymap.set('n', '<leader>sf', function()
+    vscode.action 'workbench.action.quickOpen'
+  end) -- Search Files
+  vim.keymap.set('n', '<leader>sg', function()
+    vscode.action 'workbench.action.findInFiles'
+  end) -- Search Grep
+  -- Normal 模式：获取光标下的单词并搜索
+  vim.keymap.set('n', '<leader>sw', function()
+    local word = vim.fn.expand '<cword>' -- 获取 Vim 光标下的当前单词
+    vscode.action('workbench.action.findInFiles', {
+      args = { query = word }, -- 将单词作为参数传入，VSCode 会自动填入搜索框并执行
+    })
+  end)
+  -- Visual 模式：搜索当前选中的文本
+  vim.keymap.set('x', '<leader>sw', function()
+    -- 在 Visual 模式下，直接调用 findInFiles，VSCode 默认行为就是搜索选中的文本
+    -- 但我们需要先调用 'y' (yank) 或使用 VSCode 的 API 获取选区
+    -- 最简单的方法是利用 VSCode 的原生行为：如果编辑器有选区，FindInFiles 会自动填入
+    vscode.action 'workbench.action.findInFiles'
+  end)
+  vim.keymap.set('n', '<leader>s/', function()
+    vscode.action 'workbench.action.findInFile'
+  end) -- Search Grep
+  -- TODO: with error
+  vim.keymap.set('n', '<leader>/', function()
+    local count = vim.v.count
+    if count == 0 then
+      -- 没按数字，注释当前行
+      require('vscode').action 'editor.action.commentLine'
+    else
+      -- 按了数字 (例如 3)，先选中 3 行
+      vim.cmd('normal! V' .. (count - 1) .. 'j')
+      -- 调用 VSCode 注释
+      require('vscode').action 'editor.action.commentLine'
+      -- 延迟退出选中状态，解决 Race Condition
+      vim.schedule(function()
+        vim.cmd 'normal! <Esc>'
+      end)
+    end
+  end)
+  -- Visual 模式支持
+  vim.keymap.set('x', '<leader>/', function()
+    require('vscode').action 'editor.action.commentLine'
+  end)
+  vim.keymap.set({ 'n', 'x' }, '<leader>s/', function()
+    vscode.action 'actions.find'
+  end)
+  vim.keymap.set('n', '<C-o>', function()
+    vscode.action 'workbench.action.navigateBack'
+  end)
+  vim.keymap.set('n', '<C-i>', function()
+    vscode.action 'workbench.action.navigateForward'
+  end)
+
+  -- 4. LSP 跳转 (委托给 VSCode IntelliSense)
+  vim.keymap.set('n', 'gd', function()
+    vscode.action 'editor.action.revealDefinition'
+  end)
+  vim.keymap.set('n', 'gr', function()
+    vscode.action 'editor.action.goToReferences'
+  end)
+  vim.keymap.set('n', '<leader>rn', function()
+    vscode.action 'editor.action.rename'
+  end)
+
+  -- 5. 安装 VSCode 下依然有用的纯 Lua 插件 (Lazy.nvim)
+  -- 注意：我们在这里单独 bootstrap lazy，只加载 mini.ai/surround/treesitter textobjects
+  local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
+  if not (vim.uv or vim.loop).fs_stat(lazypath) then
+    local lazyrepo = 'https://github.com/folke/lazy.nvim.git'
+    vim.fn.system { 'git', 'clone', '--filter=blob:none', '--branch=stable', lazyrepo, lazypath }
+  end
+  vim.opt.rtp:prepend(lazypath)
+
+  require('lazy').setup {
+    { -- 可以在 VSCode 中使用 Treesitter 的 textobject 功能，但不需要高亮
+      'nvim-treesitter/nvim-treesitter',
+      opts = {
+        ensure_installed = { 'c', 'cpp', 'python', 'lua', 'javascript', 'typescript' },
+        highlight = { enable = false }, -- VSCode 负责高亮，这里必须关闭
+        indent = { enable = false },
+      },
+    },
+    { -- 极其好用的文本对象增强
+      'echasnovski/mini.ai',
+      config = function()
+        require('mini.ai').setup { n_lines = 500 }
+      end,
+    },
+    { -- 极其好用的包围符号操作 (saw, sr"', etc)
+      'echasnovski/mini.surround',
+      config = function()
+        require('mini.surround').setup()
+      end,
+    },
+  }
+
+  -- VSCode 配置结束，提前返回，不再加载后续的 Shell Nvim 插件
+  return
+end
+-------------------------------------------------------------------------------
+-- [[ End of VSCode Adaption ]]
+-------------------------------------------------------------------------------
+
+-- [[ Terminal Only Keymaps ]]
+-- 这些配置只会在 pure neovim 中执行
+
+vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+
+vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+vim.keymap.set('n', '<leader>t', '<cmd>terminal<CR>')
+
+-- Window navigation (Terminal native)
+vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
+vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
+vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
+vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+
+-- Comment logic (using built-in Neovim comments or plugin)
+vim.keymap.set('n', '<leader>/', 'gcc', { desc = 'toggle comment', remap = true })
+vim.keymap.set('v', '<leader>/', 'gc', { desc = 'toggle comment', remap = true })
+
+-- Goto definination using tags
+vim.keymap.set('n', 'gd', '<C-]>', { desc = 'Jump tags defination', remap = true })
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
@@ -894,7 +971,7 @@ require('lazy').setup({
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
-    lazy = false,
+    -- lazy = false,
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
@@ -999,4 +1076,3 @@ require('lazy').setup({
 })
 
 -- The line beneath this is called `modeline`. See `:help modeline`
--- vim: ts=2 sts=2 sw=2 et
