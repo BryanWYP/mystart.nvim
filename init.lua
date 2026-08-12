@@ -111,8 +111,7 @@ if vim.g.vscode then
   -- 2. 面板操作
   vim.keymap.set('n', '<leader>t', function()
     vscode.action 'workbench.action.terminal.toggleTerminal'
-  end) -- toggle terminal
-  -- TODO: add a shortcuts of close terminal
+  end, { desc = 'Toggle terminal' })
 
   -- 3. 搜索与文件跳转 (模拟 Telescope)
   vim.keymap.set('n', '<leader>sf', function()
@@ -135,37 +134,26 @@ if vim.g.vscode then
   vim.keymap.set('n', '<leader>s/', function()
     vscode.action 'workbench.action.findInFile'
   end) -- Search Grep
-  -- TODO: 对代码进行注释，存在 bug？
   vim.keymap.set('n', '<leader>/', function()
-    local count = vim.v.count
-    if count == 0 then
-      -- 没按数字，注释当前行
-      require('vscode').action 'editor.action.commentLine'
-    else
-      -- 按了数字 (例如 3)，先选中 3 行
-      vim.cmd('normal! V' .. (count - 1) .. 'j')
-      -- 调用 VSCode 注释
-      require('vscode').action 'editor.action.commentLine'
-      -- 延迟退出选中状态，解决 Race Condition
-      vim.schedule(function()
-        vim.cmd 'normal! <Esc>'
-      end)
-    end
-  end)
-  -- Visual 模式支持
+    local first_line = vim.api.nvim_win_get_cursor(0)[1] - 1
+    local line_count = vim.v.count1
+    vscode.action('editor.action.commentLine', {
+      range = { first_line, first_line + line_count - 1 },
+    })
+  end, { desc = 'Toggle current line(s) comment' })
   vim.keymap.set('x', '<leader>/', function()
-    require('vscode').action 'editor.action.commentLine'
-  end)
-  vim.keymap.set({ 'n', 'x' }, '<leader>s/', function()
+    vscode.action 'editor.action.commentLine'
+  end, { desc = 'Toggle selection comment' })
+  vim.keymap.set('x', '<leader>s/', function()
     vscode.action 'actions.find'
-  end)
-  -- TODO：下面两个函数是什么意思？
+  end, { desc = 'Find selection in current file' })
+  -- VSCode uses its own cross-file jumplist, so these include editor and LSP navigation.
   vim.keymap.set('n', '<C-o>', function()
     vscode.action 'workbench.action.navigateBack'
-  end)
+  end, { desc = 'Navigate back' })
   vim.keymap.set('n', '<C-i>', function()
     vscode.action 'workbench.action.navigateForward'
-  end)
+  end, { desc = 'Navigate forward' })
 
   -- 4. LSP 跳转 (委托给 VSCode IntelliSense)
   vim.keymap.set('n', 'gd', function()
