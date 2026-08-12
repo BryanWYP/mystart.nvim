@@ -73,7 +73,7 @@ vim.keymap.set('i', '<C-l>', function()
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
   local line = vim.api.nvim_get_current_line()
   local next_char = line:sub(col + 1, col + 1)
-  if next_char == ')' or next_char == '"' or next_char == ']' or next_char == '`' then
+  if next_char == ')' or next_char == '"' or next_char == ']' or next_char == '`' or next_char == '}' then
     vim.api.nvim_win_set_cursor(0, { row, col + 1 })
   end
 end, { desc = '插入模式中跳出括号', noremap = true })
@@ -112,22 +112,20 @@ if vim.g.vscode then
   vim.keymap.set('n', '<leader>t', function()
     vscode.action 'workbench.action.terminal.toggleTerminal'
   end) -- toggle terminal
+  -- TODO: add a shortcuts of close terminal
 
   -- 3. 搜索与文件跳转 (模拟 Telescope)
   vim.keymap.set('n', '<leader>sf', function()
     vscode.action 'workbench.action.quickOpen'
   end) -- Search Files
-  vim.keymap.set('n', '<leader>sg', function()
-    vscode.action 'workbench.action.findInFiles'
-  end) -- Search Grep
-  -- Normal 模式：获取光标下的单词并搜索
-  vim.keymap.set('n', '<leader>sw', function()
+  -- 自定义搜索函数
+  local function find_current_word_in_files()
     local word = vim.fn.expand '<cword>' -- 获取 Vim 光标下的当前单词
     vscode.action('workbench.action.findInFiles', {
       args = { query = word }, -- 将单词作为参数传入，VSCode 会自动填入搜索框并执行
     })
-  end)
-  -- Visual 模式：搜索当前选中的文本
+  end
+  vim.keymap.set('n', '<leader>sw', find_current_word_in_files)
   vim.keymap.set('x', '<leader>sw', function()
     -- 在 Visual 模式下，直接调用 findInFiles，VSCode 默认行为就是搜索选中的文本
     -- 但我们需要先调用 'y' (yank) 或使用 VSCode 的 API 获取选区
@@ -137,7 +135,7 @@ if vim.g.vscode then
   vim.keymap.set('n', '<leader>s/', function()
     vscode.action 'workbench.action.findInFile'
   end) -- Search Grep
-  -- TODO: with error
+  -- TODO: 对代码进行注释，存在 bug？
   vim.keymap.set('n', '<leader>/', function()
     local count = vim.v.count
     if count == 0 then
@@ -161,6 +159,7 @@ if vim.g.vscode then
   vim.keymap.set({ 'n', 'x' }, '<leader>s/', function()
     vscode.action 'actions.find'
   end)
+  -- TODO：下面两个函数是什么意思？
   vim.keymap.set('n', '<C-o>', function()
     vscode.action 'workbench.action.navigateBack'
   end)
