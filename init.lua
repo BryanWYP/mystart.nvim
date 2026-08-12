@@ -155,6 +155,30 @@ if vim.g.vscode then
     vscode.action 'workbench.action.navigateForward'
   end, { desc = 'Navigate forward' })
 
+  -- Keep cursor motion in VSCode so moving across a folded range does not reveal it.
+  local function vscode_move(command)
+    for _ = 1, vim.v.count1 do
+      vscode.action(command)
+    end
+  end
+  vim.keymap.set('n', 'j', function()
+    vscode_move 'cursorDown'
+  end, { desc = 'Move down without unfolding' })
+  vim.keymap.set('n', 'k', function()
+    vscode_move 'cursorUp'
+  end, { desc = 'Move up without unfolding' })
+
+  -- VSCode owns folding in vscode-neovim; Neovim's built-in fold state is disabled.
+  vim.keymap.set('n', 'zf', function()
+    vscode.action 'editor.fold'
+  end, { desc = 'Fold at cursor' })
+  vim.keymap.set('n', 'zu', function()
+    vscode.action 'editor.unfold'
+  end, { desc = 'Unfold at cursor' })
+  vim.keymap.set('n', 'zo', function()
+    vscode.action 'editor.toggleFold'
+  end, { desc = 'Toggle fold at cursor, auto fold and unfold. o means omni' })
+
   -- 4. LSP 跳转 (委托给 VSCode IntelliSense)
   vim.keymap.set('n', 'gd', function()
     vscode.action 'editor.action.revealDefinition'
